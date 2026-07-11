@@ -21,3 +21,7 @@ venv/
 /flappy-bird/
 /hello.txt
 /docs/
+
+# obfuscated build output
+/build_obf/
+/build_bin/

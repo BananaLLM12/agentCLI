@@ -19,7 +19,7 @@ import hashlib
 import os
 
 _PKG = os.path.dirname(os.path.abspath(__file__))
-_SELF = os.path.basename(__file__)              # this verifier is not self-listed
+_STEM = os.path.splitext(os.path.basename(__file__))[0]   # "integrity" (.py or .pyc)
 _MANIFEST = "MANIFEST.sha256"
 
 # sha256 of MANIFEST.sha256's contents. Regenerate with scripts/build_manifest.py
@@ -31,24 +31,29 @@ CRITICAL = {"guard.py", "policy_file.py", "permissions.py", "intent.py",
             "agent.py", "tools.py", "redact.py"}
 
 
-def _rel_py_files() -> list[str]:
+def _module_files(base: str) -> list[str]:
+    """Every module file (.py or .pyc) under `base`, skipping __pycache__ and
+    the verifier itself (in either source or bytecode form)."""
     out = []
-    for root, _, files in os.walk(_PKG):
+    for root, _, files in os.walk(base):
+        if "__pycache__" in root.split(os.sep):
+            continue
         for fn in files:
-            if fn.endswith(".py"):
-                rel = os.path.relpath(os.path.join(root, fn), _PKG)
-                if rel != _SELF:
-                    out.append(rel)
+            stem, ext = os.path.splitext(fn)
+            if ext in (".py", ".pyc") and stem != _STEM:
+                out.append(os.path.relpath(os.path.join(root, fn), base))
     return sorted(out)
 
 
-def _hash(rel: str) -> str:
-    with open(os.path.join(_PKG, rel), "rb") as f:
+def _hash_path(p: str) -> str:
+    with open(p, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()
 
 
-def build_manifest() -> str:
-    return "".join(f"{_hash(r)}  {r}\n" for r in _rel_py_files())
+def build_manifest(base: str | None = None) -> str:
+    base = base or _PKG
+    return "".join(f"{_hash_path(os.path.join(base, r))}  {r}\n"
+                   for r in _module_files(base))
 
 
 def manifest_path() -> str:
@@ -78,7 +83,7 @@ def verify() -> dict:
         p = os.path.join(_PKG, rel)
         if not os.path.exists(p):
             missing.append(rel)
-        elif _hash(rel) != h:
+        elif _hash_path(p) != h:
             tampered.append(rel)
 
     ok = root_ok and not tampered and not missing
