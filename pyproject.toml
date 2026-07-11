@@ -14,8 +14,8 @@ keywords = ["llm", "agent", "cli", "ai", "openai", "anthropic", "tools"]
 dependencies = []  # pure standard library — no third-party deps
 
 [project.urls]
-Homepage = "https://github.com/USER/agentcli"
-Repository = "https://github.com/USER/agentcli"
+Homepage = "https://github.com/BananaLLM12/agentCLI"
+Repository = "https://github.com/BananaLLM12/agentCLI"
 
 [project.scripts]
 agentcli = "agentcli.cli:main"

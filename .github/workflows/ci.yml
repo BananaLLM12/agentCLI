@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build & smoke (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Byte-compile every module
+        run: python -m compileall -q agentcli
+
+      - name: Install & smoke-test the CLI
+        run: |
+          pip install .
+          agentcli --help > /dev/null
+          agentcli --list-providers > /dev/null
+          echo "CLI installs and runs."
+
+  integrity:
+    name: source integrity gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 1) the committed manifest must match the committed source
+      - name: Verify integrity manifest against source
+        run: |
+          python -c "import sys; from agentcli import integrity; \
+            r = integrity.verify(); print(integrity.status_line()); \
+            sys.exit(0 if r['ok'] else 1)"
+
+      # 2) regenerating the manifest must produce NO diff — i.e. nobody changed
+      #    source without re-stamping the manifest + ROOT_HASH
+      - name: Manifest is up to date with source
+        run: |
+          python scripts/build_manifest.py
+          if ! git diff --quiet -- agentcli/MANIFEST.sha256 agentcli/integrity.py; then
+            echo "::error::MANIFEST.sha256 / integrity.py are out of date."
+            echo "Run 'python3 scripts/build_manifest.py' and commit the result."
+            git --no-pager diff -- agentcli/MANIFEST.sha256 agentcli/integrity.py
+            exit 1
+          fi
+          echo "Manifest matches source — integrity verified server-side."

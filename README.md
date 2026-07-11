@@ -13,13 +13,13 @@ dependencies** (pure Python standard library).
 ## Install (one command)
 
 ```bash
-pipx install git+https://github.com/USER/agentcli.git
+pipx install git+https://github.com/BananaLLM12/agentCLI.git
 ```
 
 or with pip:
 
 ```bash
-pip install git+https://github.com/USER/agentcli.git
+pip install git+https://github.com/BananaLLM12/agentCLI.git
 ```
 
 Then run:
@@ -93,7 +93,7 @@ Everything lives under `~/.agentcli/`:
 ## Development
 
 ```bash
-git clone https://github.com/USER/agentcli.git
+git clone https://github.com/BananaLLM12/agentCLI.git
 cd agentcli
 python3 -m agentcli --help
 
