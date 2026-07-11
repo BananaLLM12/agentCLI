@@ -1,0 +1,23 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+.venv/
+venv/
+
+# os
+.DS_Store
+
+# agentcli runtime state (never commit secrets/history)
+.agentcli/
+
+# stray test artifacts from dev sessions
+/fictional_story.py
+/furry_concept.txt
+/flappy-bird.html
+/flappy-bird/
+/hello.txt
+/docs/

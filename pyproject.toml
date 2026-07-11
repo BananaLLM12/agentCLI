@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentcli"
+version = "1.0.0"
+description = "A multi-provider agentic LLM CLI — tools, permissions, and a layered security guard, in your terminal."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "darkstorm" }]
+keywords = ["llm", "agent", "cli", "ai", "openai", "anthropic", "tools"]
+dependencies = []  # pure standard library — no third-party deps
+
+[project.urls]
+Homepage = "https://github.com/USER/agentcli"
+Repository = "https://github.com/USER/agentcli"
+
+[project.scripts]
+agentcli = "agentcli.cli:main"
+
+[tool.setuptools]
+packages = ["agentcli", "agentcli.providers"]
+
+[tool.setuptools.package-data]
+agentcli = ["MANIFEST.sha256"]
