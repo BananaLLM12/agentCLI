@@ -1,5 +1,15 @@
 # agentcli
 
+![status: beta](https://img.shields.io/badge/status-beta-yellow)
+![python: 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
+![deps: none](https://img.shields.io/badge/dependencies-zero-brightgreen)
+
+> ⚠️ **Beta software.** This is early, actively-developed, and not yet
+> battle-tested. Expect rough edges, bugs, and breaking changes between
+> versions. Run it in `approve` or `read-only` mode, keep the sandbox on, and
+> please [open an issue](https://github.com/BananaLLM12/agentCLI/issues) if
+> something breaks.
+
 A multi-provider **agentic LLM CLI** that lives in your terminal — real tools, a
 permission system, a layered security guard, and a proper TUI. **Zero third-party
 dependencies** (pure Python standard library).

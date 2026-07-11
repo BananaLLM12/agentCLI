@@ -109,9 +109,10 @@ def logo(version: str = "1.0", subtitle: str = "multi-provider terminal agent") 
     mark = "a g e n t c l i"
     lines = [
         "  " + gradient("◈", ACCENT_RGB, ACCENT_RGB) + "  "
-        + gradient(mark, bold=True) + "   " + style("v" + version, FAINT),
+        + gradient(mark, bold=True) + "   " + style("v" + version, FAINT)
+        + "  " + style("• beta", TOOL, BOLD),
         "     " + gradient("▔" * len(mark)),
-        "     " + style(subtitle, MUTE),
+        "     " + style(subtitle + "  ·  beta — expect rough edges", MUTE),
     ]
     return "\n".join(lines)
 
