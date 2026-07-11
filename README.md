@@ -41,9 +41,12 @@ agentcli          # first run walks you through picking a provider + key
   sub-agents, plans, notifications.
 - **Permission modes** — `read-only` · `approve` (asks first) · `auto`, with
   path/network/shell restrictions.
-- **Layered security** — an injection guard (scans untrusted input *and* tool
-  output), an intent flagger (scans the model's own commands/code), a policy
-  file, and a low-power refusal mode. Each catches a different attack surface.
+- **Layered security** — a **kernel sandbox** for shell execution (Seatbelt on
+  macOS, bubblewrap on Linux — writes confined to the workspace, optional
+  no-network), an injection guard (scans untrusted input *and* tool output), an
+  intent flagger (scans the model's own commands/code), a policy file, and a
+  low-power refusal mode. Each catches a different attack surface; the sandbox
+  is the one a compromised process can't escape.
 - **A real TUI** — gradient logo, live status bar, command palette (`/`),
   interactive pickers, markdown rendering, mode-colored prompt.
 - **Modes** — plan mode (draft steps → approve → execute), education mode

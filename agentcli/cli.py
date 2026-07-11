@@ -402,8 +402,8 @@ def main(argv: list[str] | None = None) -> int:
 # slash commands, for tab-completion + dispatch
 _COMMANDS = ["/help", "/status", "/model", "/provider", "/mode", "/plan",
              "/approve", "/learn", "/render", "/stream", "/tools", "/agents",
-             "/policy", "/integrity", "/lock", "/history", "/clear", "/persona",
-             "/thread", "/set", "/settings", "/jobs", "/securekeys",
+             "/policy", "/integrity", "/sandbox", "/lock", "/history", "/clear",
+             "/persona", "/thread", "/set", "/settings", "/jobs", "/securekeys",
              "/compact", "/conversations", "/resume", "/menu", "/quit"]
 
 
@@ -737,6 +737,11 @@ def _status_dashboard(ctx: "_Repl") -> None:
         modes.append(f"learning: {a.education}")
     if modes:
         rows.insert(3, ("modes", " · ".join(modes)))
+    from . import sandbox
+    sb_mode = config.load().get("sandbox_mode", "workspace")
+    sb_backend = sandbox.backend()
+    rows.append(("sandbox", f"{sb_mode}"
+                 + (f" ({sb_backend})" if sb_backend else " · unavailable on this OS")))
     if jobs.JOBS:
         rows.append(("jobs", f"{jobs.running()} running · {len(jobs.JOBS)} total"))
     if config.load().get("secure_keys") and secure_store.available():
@@ -852,6 +857,7 @@ _SETTINGS = [
     ("compact_at", "auto-compact threshold", "int"),
     ("auto_compact", "auto-compact on/off", "bool"),
     ("redact_secrets", "auto-hide pasted API keys", "bool"),
+    ("sandbox_mode", "kernel sandbox: off/workspace/strict", "text"),
     ("refusal_style", "how it phrases refusals", "text"),
     ("tavily_key", "Tavily web-search API key", "text"),
     ("active_persona", "active persona text", "text"),
@@ -1017,6 +1023,20 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
         col = ui.BOT if ok else ui.ERRC
         print("  " + ui.style("⛨ " + line, col, ui.BOLD), file=sys.stderr)
         return False
+    if name == "sandbox":
+        from . import sandbox
+        a = arg.strip().lower()
+        if a in ("off", "workspace", "strict"):
+            if _locked():
+                return False
+            config.set_value("sandbox_mode", a)
+            note(f"sandbox → {a}")
+        else:
+            cur = config.load().get("sandbox_mode", "workspace")
+            b = sandbox.backend() or "none available"
+            note(f"sandbox: {cur} · backend: {b} · "
+                 f"modes: off | workspace | strict")
+        return False
     if name == "help":
         rows = [
             ("/  (bare slash)", "open the command palette ⇅"),
@@ -1031,6 +1051,7 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
             ("/agents", "inspect / tweak spawned sub-agents"),
             ("/lock", "freeze this session (one-way · restart to reset)"),
             ("/policy [lock]", "view policy · lock = permanent (edit file to undo)"),
+            ("/sandbox [mode]", "kernel sandbox: off · workspace · strict"),
             ("/set K V", "edit a setting · /settings to view all"),
             ("/jobs", "list background jobs (run_background)"),
             ("/securekeys on", "store API keys in the OS keychain"),

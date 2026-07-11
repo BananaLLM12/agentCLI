@@ -70,14 +70,16 @@ def run(name: str, args: dict[str, Any]) -> str:
       "run_background instead.",
       _obj(**{"command!": _STR, "timeout": _INT}))
 def run_shell(command: str, timeout: int = 120) -> str:
+    from . import config, sandbox
     timeout = max(1, min(int(timeout), 900))
+    mode = config.load().get("sandbox_mode", "workspace")
+    argv, _ = sandbox.wrap(command, mode)
     try:
-        p = subprocess.run(command, shell=True, capture_output=True,
-                           text=True, timeout=timeout)
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return (f"(timed out after {timeout}s — still running would block. "
                 f"Re-run with run_background for long tasks.)")
-    out = (p.stdout or "") + (p.stderr or "")
+    out = sandbox.clean_output((p.stdout or "") + (p.stderr or ""))
     return out.strip() or f"(no output, exit code {p.returncode})"
 
 

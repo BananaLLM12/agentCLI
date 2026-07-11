@@ -26,11 +26,13 @@ JOBS: dict[str, Job] = {}
 
 
 def start(command: str) -> str:
+    from . import config, sandbox
     jid = uuid.uuid4().hex[:6]
     f = tempfile.NamedTemporaryFile(prefix=f"agentcli-job-{jid}-",
                                     suffix=".log", delete=False)
-    proc = subprocess.Popen(command, shell=True, stdout=f,
-                            stderr=subprocess.STDOUT, text=True)
+    mode = config.load().get("sandbox_mode", "workspace")
+    argv, _ = sandbox.wrap(command, mode)
+    proc = subprocess.Popen(argv, stdout=f, stderr=subprocess.STDOUT, text=True)
     JOBS[jid] = Job(jid, command, proc, f.name)
     return jid
 
