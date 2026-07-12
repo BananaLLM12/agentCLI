@@ -51,6 +51,11 @@ def get_key(provider_id: str, env_var: str) -> str | None:
 
 
 def set_key(provider_id: str, key: str) -> None:
+    try:
+        from . import redact
+        redact.invalidate_cache()
+    except Exception:
+        pass
     if _secure_on():
         from . import secure_store
         if secure_store.set_key(provider_id, key):
