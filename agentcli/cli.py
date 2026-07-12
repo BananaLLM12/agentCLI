@@ -173,13 +173,16 @@ def _build_policy(args, cfg):
     """Assemble a permission Policy from flags + config + the policy file."""
     from . import policy_file
     from .permissions import Mode, Policy
+    pol = policy_file.load()
     mode = args.mode or cfg.get("default_mode", "approve")
+    if pol.get("_tampered"):          # signature failed -> fail safe to read-only
+        mode = "read-only"
     return Policy(
         mode=Mode(mode),
         allow_paths=args.allow_path or cfg.get("allow_paths"),
-        allow_network=not args.no_network,
-        allow_shell=not args.no_shell,
-        declined_tools=policy_file.declined_tools(),
+        allow_network=not args.no_network and not pol.get("_tampered"),
+        allow_shell=not args.no_shell and not pol.get("_tampered"),
+        declined_tools=policy_file.declined_tools(pol),
     )
 
 
@@ -378,6 +381,12 @@ def main(argv: list[str] | None = None) -> int:
             print(ui.error_line(line), file=sys.stderr)
             return 3
         print(ui.style("  ⚠ integrity: " + line, ui.TOOL, ui.BOLD), file=sys.stderr)
+
+    # policy-tamper check — a broken signature means the file was edited on disk
+    if policy_file.tampered():
+        print(ui.notify_banner("POLICY", "policy.json signature invalid — it was "
+                               "edited on disk. Falling back to strict built-in "
+                               "rules + read-only.", "failed"), file=sys.stderr)
 
     if args.prompt is not None:
         text, imgs = images.extract(args.prompt)
@@ -661,10 +670,12 @@ def _cmd_policy(ctx: "_Repl", arg: str) -> None:
     p = policy_file.load()
 
     if sub == "lock":
-        p["locked"] = True
-        policy_file.POLICY_PATH.write_text(_json_dumps(p), "utf-8")
-        _note("policy LOCKED — permanent for this install. To undo, edit "
-              f"{policy_file.POLICY_PATH} directly (owner filesystem access only).")
+        policy_file.lock()          # signs it — editing the file now breaks the sig
+        where = "OS keychain" if __import__("agentcli.secure_store",
+                fromlist=["available"]).available() else "a 0600 local key"
+        _note(f"policy LOCKED + SIGNED (key in {where}). Editing policy.json now "
+              "fails the signature check → the tool falls back to strict "
+              "defaults. To change it legitimately, re-run /policy lock.")
     else:
         print(file=sys.stderr)
         print(ui.style(f"  ◆ operating policy  ({policy_file.POLICY_PATH})",
