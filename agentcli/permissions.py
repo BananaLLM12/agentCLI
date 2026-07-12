@@ -38,8 +38,8 @@ MUTATING = {"run_shell", "run_background", "write_file", "append_file",
             "move_path", "copy_path", "delete_path", "http_post"}
 # tools whose target paths must stay within allow_paths (checks path/src/dst)
 FILE_TOOLS = {"read_file", "write_file", "append_file", "edit_file",
-              "replace_lines", "insert_lines", "read_lines", "list_dir",
-              "find_files", "search_text", "make_dir", "move_path",
+              "replace_lines", "insert_lines", "read_lines", "inspect_image",
+              "list_dir", "find_files", "search_text", "make_dir", "move_path",
               "copy_path", "delete_path"}
 _PATH_KEYS = ("path", "src", "dst")
 

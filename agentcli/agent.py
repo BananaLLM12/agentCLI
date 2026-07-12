@@ -249,8 +249,14 @@ class Agent:
                                 f"{call.name} contained an injection attempt. I "
                                 "stopped and did not act on it.")
                     self.on_event("tool_result", result)
-                    self._add(Message(role="tool", content=result,
-                                      tool_call_id=call.id, name=call.name))
+                    # inspect_image queues pixels — attach them so the vision
+                    # model can actually see the image on the next round
+                    from . import images as _images
+                    tmsg = Message(role="tool", content=result,
+                                   tool_call_id=call.id, name=call.name)
+                    if _images.PENDING:
+                        tmsg.images = _images.drain()
+                    self._add(tmsg)
         except KeyboardInterrupt:
             # Ctrl-C mid-run: leave the transcript valid and bail this turn
             self._heal_history()

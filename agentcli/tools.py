@@ -179,6 +179,23 @@ def search_text(pattern: str, path: str = ".", glob: str = "**/*") -> str:
     return "\n".join(out) or "(no matches)"
 
 
+@tool("inspect_image", "Look at an image file. Reports its format, dimensions, "
+      "and size, AND loads the actual image so you can SEE and describe its "
+      "contents on your next step (requires a vision-capable model).",
+      _obj(**{"path!": _STR}))
+def inspect_image(path: str) -> str:
+    from . import images
+    img = images.load(path)
+    if img is None:
+        return f"error: '{path}' is not a readable image (png/jpg/gif/webp/bmp)"
+    dims = images.dimensions(img.data)
+    images.queue(img)                       # attached to the next model turn
+    size_kb = len(img.data) / 1024
+    dim = f"{dims[0]}×{dims[1]}px" if dims else "unknown size"
+    return (f"{path}: {img.mime.split('/')[1].upper()} · {dim} · "
+            f"{size_kb:.0f} KB — image attached; describe what you see.")
+
+
 @tool("read_lines", "Read a slice of a text file (1-indexed, inclusive).",
       _obj(**{"path!": _STR, "start": _INT, "end": _INT}))
 def read_lines(path: str, start: int = 1, end: int = 200) -> str:

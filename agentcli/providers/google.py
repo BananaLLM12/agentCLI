@@ -52,10 +52,13 @@ class GoogleProvider(Provider):
                     parts.insert(0, {"text": m.content})
                 contents.append({"role": "model", "parts": parts})
             elif m.role == "tool":
-                contents.append({"role": "user", "parts": [{
-                    "functionResponse": {"name": m.name or "tool",
-                                         "response": {"result": m.content}},
-                }]})
+                parts = [{"functionResponse": {"name": m.name or "tool",
+                                               "response": {"result": m.content}}}]
+                for img in m.images:      # inlineData shares the functionResponse turn
+                    parts.append({"inlineData": {
+                        "mimeType": img.mime,
+                        "data": base64.b64encode(img.data).decode()}})
+                contents.append({"role": "user", "parts": parts})
             elif m.role == "user" and m.images:
                 parts = [{"text": m.content}] if m.content else []
                 for img in m.images:

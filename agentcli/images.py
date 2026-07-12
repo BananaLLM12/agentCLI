@@ -38,6 +38,50 @@ def load(path: str) -> Image | None:
         return Image(data=f.read(), mime=mime)
 
 
+def dimensions(data: bytes) -> tuple[int, int] | None:
+    """Best-effort (width, height) from image header bytes — no PIL needed."""
+    import struct
+    try:
+        if data[:8] == b"\x89PNG\r\n\x1a\n":                     # PNG
+            w, h = struct.unpack(">II", data[16:24]); return (w, h)
+        if data[:3] == b"GIF":                                    # GIF
+            w, h = struct.unpack("<HH", data[6:10]); return (w, h)
+        if data[:2] == b"BM":                                     # BMP
+            w, h = struct.unpack("<ii", data[18:26]); return (w, abs(h))
+        if data[:2] == b"\xff\xd8":                               # JPEG
+            i = 2
+            while i < len(data) - 9:
+                if data[i] != 0xFF:
+                    i += 1; continue
+                marker = data[i + 1]
+                if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+                    h, w = struct.unpack(">HH", data[i + 5:i + 9]); return (w, h)
+                seg = struct.unpack(">H", data[i + 2:i + 4])[0]
+                i += 2 + seg
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":         # WEBP (VP8X/VP8)
+            if data[12:16] == b"VP8X":
+                w = 1 + (data[24] | data[25] << 8 | data[26] << 16)
+                h = 1 + (data[27] | data[28] << 8 | data[29] << 16)
+                return (w, h)
+    except Exception:
+        return None
+    return None
+
+
+# images the model requested via inspect_image, awaiting attach to the next turn
+PENDING: list[Image] = []
+
+
+def queue(img: Image) -> None:
+    PENDING.append(img)
+
+
+def drain() -> list[Image]:
+    out = list(PENDING)
+    PENDING.clear()
+    return out
+
+
 def extract(text: str) -> tuple[str, list[Image]]:
     """Return (text_without_image_paths, [loaded images])."""
     images: list[Image] = []

@@ -43,11 +43,14 @@ class AnthropicProvider(Provider):
                                    "name": tc.name, "input": tc.arguments})
                 out.append({"role": "assistant", "content": blocks})
             elif m.role == "tool":
-                out.append({"role": "user", "content": [{
-                    "type": "tool_result",
-                    "tool_use_id": m.tool_call_id,
-                    "content": m.content,
-                }]})
+                blocks = [{"type": "tool_result",
+                           "tool_use_id": m.tool_call_id,
+                           "content": m.content}]
+                for img in m.images:      # image blocks share the tool_result turn
+                    blocks.append({"type": "image", "source": {
+                        "type": "base64", "media_type": img.mime,
+                        "data": base64.b64encode(img.data).decode()}})
+                out.append({"role": "user", "content": blocks})
             elif m.role == "user" and m.images:
                 blocks: list[dict[str, Any]] = []
                 for img in m.images:

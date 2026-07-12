@@ -61,6 +61,14 @@ class OpenAICompatProvider(Provider):
                     "tool_call_id": m.tool_call_id,
                     "content": m.content,
                 })
+                if m.images:      # tool role can't hold images -> follow-up user turn
+                    parts: list[dict[str, Any]] = [
+                        {"type": "text", "text": "(image from the tool above)"}]
+                    for img in m.images:
+                        b64 = base64.b64encode(img.data).decode()
+                        parts.append({"type": "image_url", "image_url": {
+                            "url": f"data:{img.mime};base64,{b64}"}})
+                    out.append({"role": "user", "content": parts})
             elif m.role == "user" and m.images:
                 parts: list[dict[str, Any]] = [{"type": "text", "text": m.content}]
                 for img in m.images:
