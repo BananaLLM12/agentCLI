@@ -392,10 +392,18 @@ def http_post(url: str, json: dict | None = None, headers: dict | None = None) -
         return r.read().decode("utf-8", "replace")[:4000]
 
 
-@tool("get_env", "Read an environment variable (empty string if unset).",
+@tool("get_env", "Read an environment variable. Values of secret-looking vars "
+      "(names with KEY/TOKEN/SECRET/PASSWORD/CREDENTIAL) are masked.",
       _obj(**{"name!": _STR}))
 def get_env(name: str) -> str:
-    return os.environ.get(name, "")
+    val = os.environ.get(name, "")
+    if not val:
+        return ""
+    sensitive = ("KEY", "TOKEN", "SECRET", "PASSWORD", "PASSWD", "CREDENTIAL",
+                 "PRIVATE")
+    if any(s in name.upper() for s in sensitive):
+        return f"[masked: {name} is a sensitive variable]"
+    return val
 
 
 @tool("now", "Current local date and time (ISO 8601).", _obj())

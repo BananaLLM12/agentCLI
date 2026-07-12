@@ -236,6 +236,14 @@ class Agent:
                     tool_calls += 1
                     self.on_event("tool_call", (call.name, call.arguments))
                     result = self._run_tool(call.name, call.arguments)
+                    # mask any secrets in tool output before the model sees them
+                    # (a read_file/get_env/shell result could leak keys -> exfil)
+                    from . import config as _cfg, redact as _redact
+                    if _cfg.load().get("redact_secrets", True):
+                        result, _hidden = _redact.redact(result)
+                        if _hidden:
+                            self.on_event("security", f"masked {len(_hidden)} "
+                                          f"secret(s) in {call.name} output")
                     # tool output is untrusted — scan before it re-enters context
                     poisoned = self._guard_assess(result, f"tool:{call.name}")["attempt"]
                     if poisoned:
@@ -309,6 +317,13 @@ class Agent:
             prov = copy.copy(prov)
             prov.model = model
 
+        # the persona here comes from the MODEL — vet it so it can't jailbreak
+        # its own child (drop anything that scans as an override attempt)
+        from . import guard as _g
+        if persona and sum(w for w, _ in _g.GUARD.scan(persona)) >= _g.ATTEMPT_SCORE:
+            self.on_event("security", "sub-agent persona looked like an "
+                                      "injection — stripped")
+            persona = ""
         sys_prompt = ((persona.strip() + "\n\n") if persona else "") + (
             "You are a focused sub-agent. Complete the assigned task using your "
             "tools, then report the result concisely. Do not ask questions.")
