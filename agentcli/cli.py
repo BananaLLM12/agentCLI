@@ -414,9 +414,10 @@ def main(argv: list[str] | None = None) -> int:
 # slash commands, for tab-completion + dispatch
 _COMMANDS = ["/help", "/status", "/model", "/provider", "/mode", "/plan",
              "/approve", "/learn", "/render", "/stream", "/tools", "/agents",
-             "/policy", "/integrity", "/sandbox", "/lock", "/history", "/clear",
-             "/persona", "/thread", "/set", "/settings", "/jobs", "/securekeys",
-             "/compact", "/conversations", "/resume", "/menu", "/quit"]
+             "/policy", "/integrity", "/sandbox", "/audit", "/lock", "/history",
+             "/clear", "/persona", "/thread", "/set", "/settings", "/jobs",
+             "/securekeys", "/compact", "/conversations", "/resume", "/menu",
+             "/quit"]
 
 
 class _Repl:
@@ -1036,6 +1037,26 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
         ok = integrity.verify()["ok"]
         col = ui.BOT if ok else ui.ERRC
         print("  " + ui.style("⛨ " + line, col, ui.BOLD), file=sys.stderr)
+        return False
+    if name == "audit":
+        from . import audit
+        import time as _t
+        v = audit.verify()
+        entries = audit.tail(15)
+        if not entries:
+            note("audit log is empty"); return False
+        print(file=sys.stderr)
+        for e in entries:
+            when = _t.strftime("%H:%M:%S", _t.localtime(e.get("ts", 0)))
+            ev = e.get("event", "")
+            col = ui.ERRC if ev in ("injection", "denied") else (
+                ui.TOOL if ev == "tool_call" else ui.MUTE)
+            print(f"  {ui.style(when, ui.FAINT)} {ui.style(ev, col)} "
+                  + ui.style(e.get("detail", "")[:60], ui.MUTE), file=sys.stderr)
+        chain = (ui.style("✓ chain intact", ui.BOT) if v["ok"]
+                 else ui.style(f"✗ TAMPERED at entry {v['broken_at']}", ui.ERRC))
+        print("  " + chain + ui.style(f"  ·  {v['entries']} entries", ui.FAINT),
+              file=sys.stderr)
         return False
     if name == "sandbox":
         from . import sandbox

@@ -358,12 +358,14 @@ class Agent:
     def _guard_assess(self, text: str, source: str) -> dict:
         """Run text through the injection guard and react to escalations.
         Returns the assessment (caller short-circuits the turn on an attempt)."""
-        from . import guard
+        from . import audit, guard
         from .permissions import Mode
         r = guard.GUARD.assess(text, source)
         if not r["attempt"]:
             return r
         labels = ", ".join(r["labels"])
+        audit.record("injection", f"{source} [{labels}] "
+                     + ("LOCKED" if r["locked"] else "hardened"))
         if r["locked"]:
             # freeze everything
             self.policy.mode = Mode.READONLY
@@ -384,10 +386,13 @@ class Agent:
 
     def _run_tool(self, name: str, args: dict) -> str:
         """Consult the injection guard, then the permission policy, then run."""
-        from . import guard
+        from . import audit, guard
         from .permissions import Decision
 
+        audit.record("tool_call", f"{name} {str(args)[:200]}")
+
         if guard.GUARD.locked:
+            audit.record("denied", f"{name}: session locked")
             return "[session locked by security guard — tool use disabled]"
 
         # plan mode: allow only planning + read-only inspection, block mutations
