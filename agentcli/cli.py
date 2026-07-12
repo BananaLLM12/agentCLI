@@ -145,6 +145,8 @@ def _printer(quiet: bool):
             print(ui.style("  ⚠ " + text, ui.TOOL, ui.BOLD), file=sys.stderr)
         elif kind == "intent":
             print(ui.style("  ⚡ intent · " + text, ui.ERRC, ui.BOLD), file=sys.stderr)
+        elif kind == "monitor":
+            print(ui.style("  ⊙ monitor · " + text, ui.TOOL, ui.BOLD), file=sys.stderr)
         elif kind == "locked":
             print(ui.notify_banner("SECURITY", text, "failed"), file=sys.stderr)
         elif kind == "denied":
@@ -414,7 +416,8 @@ def main(argv: list[str] | None = None) -> int:
 # slash commands, for tab-completion + dispatch
 _COMMANDS = ["/help", "/status", "/model", "/provider", "/mode", "/plan",
              "/approve", "/learn", "/render", "/stream", "/tools", "/agents",
-             "/policy", "/integrity", "/sandbox", "/audit", "/lock", "/history",
+             "/policy", "/integrity", "/sandbox", "/audit", "/monitor", "/lock",
+             "/history",
              "/clear", "/persona", "/thread", "/set", "/settings", "/jobs",
              "/securekeys", "/compact", "/conversations", "/resume", "/menu",
              "/quit"]
@@ -873,6 +876,8 @@ _SETTINGS = [
     ("auto_compact", "auto-compact on/off", "bool"),
     ("redact_secrets", "auto-hide pasted API keys", "bool"),
     ("sandbox_mode", "kernel sandbox: off/workspace/strict", "text"),
+    ("monitor", "hidden judge-LLM on tool output", "bool"),
+    ("monitor_model", "cheaper model for the monitor", "text"),
     ("refusal_style", "how it phrases refusals", "text"),
     ("tavily_key", "Tavily web-search API key", "text"),
     ("active_persona", "active persona text", "text"),
@@ -1058,6 +1063,22 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
         print("  " + chain + ui.style(f"  ·  {v['entries']} entries", ui.FAINT),
               file=sys.stderr)
         return False
+    if name == "monitor":
+        a = arg.strip().lower()
+        if a in ("on", "off"):
+            config.set_value("monitor", "true" if a == "on" else "false")
+            note(f"hidden security monitor {a}"
+                 + (" — judges untrusted tool output with a tool-less LLM"
+                    if a == "on" else ""))
+        elif a.startswith("model "):
+            config.set_value("monitor_model", arg.split(maxsplit=1)[1].strip())
+            note(f"monitor model → {config.load().get('monitor_model')}")
+        else:
+            cfg = config.load()
+            note(f"monitor: {'on' if cfg.get('monitor') else 'off'} · "
+                 f"model: {cfg.get('monitor_model') or '(main model)'} · "
+                 f"/monitor on|off · /monitor model <id>")
+        return False
     if name == "sandbox":
         from . import sandbox
         a = arg.strip().lower()
@@ -1087,6 +1108,8 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
             ("/lock", "freeze this session (one-way · restart to reset)"),
             ("/policy [lock]", "view policy · lock = permanent (edit file to undo)"),
             ("/sandbox [mode]", "kernel sandbox: off · workspace · strict"),
+            ("/monitor [on|off]", "hidden judge-LLM over untrusted tool output"),
+            ("/audit", "tamper-evident action log + chain check"),
             ("/set K V", "edit a setting · /settings to view all"),
             ("/jobs", "list background jobs (run_background)"),
             ("/securekeys on", "store API keys in the OS keychain"),

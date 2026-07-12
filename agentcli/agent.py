@@ -244,11 +244,17 @@ class Agent:
                         if _hidden:
                             self.on_event("security", f"masked {len(_hidden)} "
                                           f"secret(s) in {call.name} output")
-                    # tool output is untrusted — scan before it re-enters context
+                    # tool output is untrusted — fast regex scan first (free)
                     poisoned = self._guard_assess(result, f"tool:{call.name}")["attempt"]
-                    if poisoned:
-                        # withhold the injected content and stop this turn so it
-                        # can't steer the model
+                    verdict = "OK"
+                    if not poisoned:
+                        # regex passed — ask the hidden judge LLM (catches novel
+                        # injections patterns miss). Only on untrusted tools.
+                        verdict = self._monitor_check(result, call.name)
+                    if poisoned or verdict == "BLOCK":
+                        from . import audit as _audit
+                        _audit.record("blocked", f"tool:{call.name} "
+                                      + ("regex" if poisoned else "monitor:BLOCK"))
                         self._add(Message(role="tool",
                                           content="[withheld: content contained "
                                           "an injection attempt]",
@@ -256,6 +262,16 @@ class Agent:
                         return ("⚠ Blocked: the content from "
                                 f"{call.name} contained an injection attempt. I "
                                 "stopped and did not act on it.")
+                    if verdict == "STOP":
+                        from . import audit as _audit
+                        _audit.record("stopped", f"tool:{call.name} monitor:STOP")
+                        self._add(Message(role="tool",
+                                          content="[held for review: the monitor "
+                                          "flagged this content as suspicious]",
+                                          tool_call_id=call.id, name=call.name))
+                        return ("⏸ Paused: the security monitor flagged the "
+                                f"{call.name} output as suspicious. Review it "
+                                "before continuing.")
                     self.on_event("tool_result", result)
                     # inspect_image queues pixels — attach them so the vision
                     # model can actually see the image on the next round
@@ -354,6 +370,30 @@ class Agent:
             # any further tool calls in this turn spawn from the right place
             from . import tools as _tools
             _tools.set_active_agent(self)
+
+    # tools whose output is genuinely untrusted (external / attacker-influenced)
+    _UNTRUSTED_TOOLS = {"http_get", "http_post", "web_search", "read_file",
+                        "read_lines", "run_shell", "run_background", "check_job",
+                        "search_text"}
+
+    def _monitor_check(self, content: str, tool_name: str) -> str:
+        """Ask the hidden judge LLM about untrusted tool output. Returns
+        OK/STOP/BLOCK. No-op (OK) unless enabled and the tool is untrusted."""
+        from . import config
+        cfg = config.load()
+        if not cfg.get("monitor") or tool_name not in self._UNTRUSTED_TOOLS:
+            return "OK"
+        from . import audit, monitor
+        prov = self.provider
+        model = cfg.get("monitor_model")
+        if model and model != prov.model:
+            import copy
+            prov = copy.copy(prov); prov.model = model
+        verdict = monitor.judge(prov, content)
+        if verdict != "OK":
+            self.on_event("monitor", f"{tool_name} output → {verdict}")
+            audit.record("monitor", f"tool:{tool_name} {verdict}")
+        return verdict
 
     def _guard_assess(self, text: str, source: str) -> dict:
         """Run text through the injection guard and react to escalations.
