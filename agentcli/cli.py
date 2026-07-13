@@ -230,7 +230,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--temperature", type=float, default=0.7)
     p.add_argument("--max-tokens", type=int, default=None,
                    help="response token budget (default: the model's max; auto-grows)")
-    p.add_argument("--max-steps", type=int, default=8)
+    p.add_argument("--max-steps", type=int, default=25,
+                   help="max tool-call rounds per turn before it pauses (default 25)")
     p.add_argument("--quiet", action="store_true")
     p.add_argument("--no-save", action="store_true", help="don't log to sqlite")
     p.add_argument("--resume", default=None, metavar="ID", help="resume a conversation")

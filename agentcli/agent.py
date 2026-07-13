@@ -235,6 +235,8 @@ class Agent:
 
         self._add(Message(role="user", content=user_text, images=images or []))
         specs = tools.specs() if self.use_tools else []
+        sig_counts: dict = {}          # detect the model looping on one call
+        stopped_reason = "hit the tool-step limit"
 
         try:
             for _ in range(self.max_steps):
@@ -247,6 +249,18 @@ class Agent:
                     # the caller renders the final reply (bot label + markdown);
                     # emitting it here too would double-print it
                     return completion.text
+
+                # loop guard: if the model repeats the SAME call 4x, it's stuck
+                looping = False
+                for _c in completion.tool_calls:
+                    sig = f"{_c.name}:{str(_c.arguments)}"
+                    sig_counts[sig] = sig_counts.get(sig, 0) + 1
+                    if sig_counts[sig] >= 4:
+                        looping = True
+                if looping:
+                    stopped_reason = "detected a repeating tool-call loop"
+                    self.on_event("retry", stopped_reason + " — wrapping up")
+                    break
 
                 # narrate what it's about to do BEFORE running the tools
                 # (in streaming the text already flowed via deltas)
@@ -311,7 +325,20 @@ class Agent:
             self.last_turn = {"tool_calls": tool_calls,
                               "seconds": _t.monotonic() - started}
 
-        return "(stopped: hit max tool-call steps)"
+        # cap hit or loop broken: make the transcript valid, then ask the model
+        # (tool-less) to summarize what it did / what's left — no bare "(stopped)"
+        self._heal_history()
+        try:
+            self.on_event("retry", f"{stopped_reason} — summarizing progress")
+            final = self._call([])
+            self._add(Message(role="assistant", content=final.text))
+            if final.text.strip():
+                note = f"\n\n_(paused — {stopped_reason}. Say 'continue' to resume.)_"
+                return final.text + note
+        except Exception:
+            pass
+        return (f"(stopped: {stopped_reason} — the transcript is intact, say "
+                "'continue' to resume.)")
 
     def _heal_history(self) -> None:
         """After an interrupt, make sure every assistant tool_call has a tool
