@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>flixcraft — a Three.js Minecraft</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', system-ui, sans-serif; }
+  #game { position: fixed; inset: 0; display: block; }
+
+  /* Crosshair */
+  #crosshair {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 22px; height: 22px; pointer-events: none; z-index: 10;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: rgba(255,255,255,.85);
+    box-shadow: 0 0 2px rgba(0,0,0,.6);
+  }
+  #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after  { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
+
+  /* Hotbar */
+  #hotbar {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: flex; gap: 4px; padding: 5px; background: rgba(0,0,0,.35);
+    border: 2px solid rgba(255,255,255,.25); border-radius: 6px; z-index: 10;
+    backdrop-filter: blur(2px);
+  }
+  .slot {
+    width: 52px; height: 52px; border: 2px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.06); display: flex; align-items: center;
+    justify-content: center; border-radius: 4px; position: relative;
+  }
+  .slot.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.5); }
+  .slot canvas { width: 40px; height: 40px; image-rendering: pixelated; }
+  .slot .num {
+    position: absolute; top: 1px; left: 3px; font-size: 10px; color: rgba(255,255,255,.7);
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  /* HUD info */
+  #hud {
+    position: fixed; left: 10px; top: 10px; color: #fff; font-size: 13px;
+    text-shadow: 1px 1px 0 #000; z-index: 10; line-height: 1.5; pointer-events: none;
+  }
+  #hud b { color: #ffe27a; }
+
+  /* Start / pause overlay */
+  #overlay {
+    position: fixed; inset: 0; background: rgba(10,14,20,.78); color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 20; text-align: center; cursor: pointer;
+  }
+  #overlay h1 { font-size: 52px; margin-bottom: 6px; letter-spacing: 2px;
+    background: linear-gradient(90deg,#7CFC00,#4a8a2c); -webkit-background-clip: text;
+    background-clip: text; color: transparent; text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  #overlay p { font-size: 16px; opacity: .85; max-width: 520px; line-height: 1.6; margin: 4px 0; }
+  #overlay .keys { margin-top: 14px; font-size: 14px; opacity: .9; }
+  #overlay .keys span { display: inline-block; background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2); border-radius: 4px; padding: 2px 8px; margin: 2px; }
+  #overlay .play { margin-top: 22px; font-size: 18px; padding: 12px 28px;
+    background: #4a8a2c; border: 2px solid #7CFC00; border-radius: 8px; font-weight: 600; }
+  #loading { color: #ffd54a; margin-top: 10px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="crosshair"></div>
+
+  <div id="hud">
+    <div>FPS: <b id="fps">--</b></div>
+    <div>XYZ: <b id="pos">--</b></div>
+    <div>Block: <b id="selblock">grass</b></div>
+  </div>
+
+  <div id="hotbar"></div>
+
+  <div id="overlay">
+    <h1>flixcraft</h1>
+    <p>A tiny Minecraft, built in Three.js. Procedural terrain, block breaking &amp; placing, physics, and a hotbar. No assets — every texture is drawn in code.</p>
+    <div class="keys">
+      <span>WASD</span> move &nbsp; <span>Space</span> jump &nbsp; <span>Shift</span> sprint
+      &nbsp; <span>Mouse</span> look<br/>
+      <span>Left Click</span> break &nbsp; <span>Right Click</span> place
+      &nbsp; <span>1–9 / Scroll</span> select &nbsp; <span>Esc</span> pause
+    </div>
+    <div class="play" id="playbtn">Click to play</div>
+    <div id="loading">Generating world…</div>
+  </div>
+
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="js/noise.js"></script>
+  <script src="js/blocks.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

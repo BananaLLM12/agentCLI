@@ -24,7 +24,7 @@ _MANIFEST = "MANIFEST.sha256"
 
 # sha256 of MANIFEST.sha256's contents. Regenerate with scripts/build_manifest.py
 # after any legitimate source change, then paste the new value here.
-ROOT_HASH = "13561492ca62a8ea42767f7491d904080025ad83622a4990986b4553f1cfe8f8"
+ROOT_HASH = "ad527f2d59f7ac199ea69cf62d698eb31bfd362ba0f22c78e05a7d1c724104fd"
 
 # files whose modification is security-critical (a subset, for reporting)
 CRITICAL = {"guard.py", "policy_file.py", "permissions.py", "intent.py",

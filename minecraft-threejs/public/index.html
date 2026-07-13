@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft-ThreeJS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Crosshair -->
+    <div id="crosshair">+</div>
+
+    <!-- HUD: hotbar -->
+    <div id="hotbar">
+      <div class="slot" data-slot="0"><span class="slot-number">1</span><div class="slot-icon" id="slot-0"></div></div>
+      <div class="slot" data-slot="1"><span class="slot-number">2</span><div class="slot-icon" id="slot-1"></div></div>
+      <div class="slot" data-slot="2"><span class="slot-number">3</span><div class="slot-icon" id="slot-2"></div></div>
+      <div class="slot" data-slot="3"><span class="slot-number">4</span><div class="slot-icon" id="slot-3"></div></div>
+      <div class="slot" data-slot="4"><span class="slot-number">5</span><div class="slot-icon" id="slot-4"></div></div>
+      <div class="slot" data-slot="5"><span class="slot-number">6</span><div class="slot-icon" id="slot-5"></div></div>
+      <div class="slot" data-slot="6"><span class="slot-number">7</span><div class="slot-icon" id="slot-6"></div></div>
+      <div class="slot" data-slot="7"><span class="slot-number">8</span><div class="slot-icon" id="slot-7"></div></div>
+      <div class="slot" data-slot="8"><span class="slot-number">9</span><div class="slot-icon" id="slot-8"></div></div>
+    </div>
+
+    <!-- Debug info -->
+    <div id="debug-info">
+      <div id="fps">FPS: 0</div>
+      <div id="position">Pos: 0, 0, 0</div>
+      <div id="chunks">Chunks: 0</div>
+      <div id="block-count">Blocks: 0</div>
+      <div id="mode">Mode: Survival</div>
+    </div>
+
+    <!-- Loading screen -->
+    <div id="loading-screen">
+      <div class="loading-content">
+        <h1>⛏️ Minecraft-ThreeJS</h1>
+        <p>Generating world...</p>
+        <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- Pause / start screen -->
+    <div id="start-screen" class="hidden">
+      <div class="start-content">
+        <h1>⛏️ Minecraft-ThreeJS</h1>
+        <div class="controls-list">
+          <h2>Controls</h2>
+          <div class="control-row"><kbd>WASD</kbd><span>Move</span></div>
+          <div class="control-row"><kbd>Space</kbd><span>Jump</span></div>
+          <div class="control-row"><kbd>Shift</kbd><span>Sprint</span></div>
+          <div class="control-row"><kbd>Mouse</kbd><span>Look around</span></div>
+          <div class="control-row"><kbd>Left Click</kbd><span>Break block</span></div>
+          <div class="control-row"><kbd>Right Click</kbd><span>Place block</span></div>
+          <div class="control-row"><kbd>1-9</kbd><span>Select hotbar slot</span></div>
+          <div class="control-row"><kbd>F</kbd><span>Toggle fly mode</span></div>
+          <div class="control-row"><kbd>R</kbd><span>Regenerate world</span></div>
+          <div class="control-row"><kbd>ESC</kbd><span>Pause / release mouse</span></div>
+        </div>
+        <button id="play-button">Play</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./js/three.module.min.js"
+    }
+  }
+  </script>
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>

@@ -108,10 +108,14 @@ class Agent:
                 "reply, grade it warmly, correct mistakes with a hint, and move "
                 "to the next bite. Periodically quiz them on earlier material. "
                 "Adapt the difficulty to how they're doing. Keep it engaging.")
-        base_history = self.history
-        if directives:
-            base_history = self.history + [Message(role="system",
-                                                   content="\n\n".join(directives))]
+        def build_base():
+            if directives:
+                return self.history + [Message(role="system",
+                                               content="\n\n".join(directives))]
+            return self.history
+
+        base_history = build_base()
+        ctx_compactions = 0
         while True:
             # spinner only wraps the model round-trip (not tool runs / prompts)
             spin = not self.stream
@@ -131,6 +135,23 @@ class Agent:
                 if spin:
                     self.on_event("thinking", "stop")
                 msg = str(e).lower()
+                # -- input history outgrew the context window: compact + retry --
+                ctx_over = any(s in msg for s in (
+                    "context length", "maximum context", "context_length",
+                    "too many tokens", "input is too long", "prompt is too long",
+                    "reduce the length", "maximum context length"))
+                if ctx_over and ctx_compactions < 3:
+                    ctx_compactions += 1
+                    stats = self.compact(keep_recent=3 if ctx_compactions == 1 else 1)
+                    if stats:
+                        base_history = build_base()
+                        self.on_event("retry", "context window exceeded — "
+                                               "compacted history and retrying")
+                        continue
+                    # nothing left to compact -> drop the budget as a last resort
+                    budget = max(self._MIN_BUDGET, budget // 2)
+                    self.on_event("retry", "context tight — shrinking output budget")
+                    continue
                 # -- too large for the tier: shrink and retry --
                 too_big = e.status == 413 or "too large" in msg or "tokens per minute" in msg
                 if too_big and budget > self._MIN_BUDGET:

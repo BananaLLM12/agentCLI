@@ -49,8 +49,9 @@ _RULES: list[tuple[re.Pattern, int, str]] = [
 
 ATTEMPT_SCORE = 3      # a single scan at/above this = an attempt
 LOCK_SCORE = 6         # one scan this severe = immediate lock
-LOCK_ATTEMPTS = 2      # this many separate attempts = lock
-LOWPOWER_ATTEMPTS = 3  # repeated attempts -> stop engaging, just say "no."
+LOCK_ATTEMPTS = 2      # this many RECENT attempts = lock
+LOWPOWER_ATTEMPTS = 3  # this many RECENT attempts -> low-power ("no.")
+ATTEMPT_WINDOW = 180   # seconds; attempts older than this age out (no attrition lockout)
 
 # genuinely heinous intent — instant low-power. Kept abstract on purpose:
 # these are categories the tool will simply refuse, curtly.
@@ -73,7 +74,8 @@ class Guard:
 
     def reset(self) -> None:
         self.level = 0        # 0 normal · 1 hardened · 2 locked
-        self.attempts = 0
+        self.attempts = 0     # lifetime count (for display / audit)
+        self._recent: list[float] = []   # timestamps of recent attempts
         self.locked = False
         self.low_power = False   # curt-refusal mode: only ever answers "no."
         self.log: list[dict] = []
@@ -101,14 +103,21 @@ class Guard:
             return result
 
         if score >= ATTEMPT_SCORE:
+            import time
+            now = time.time()
             self.attempts += 1
+            # escalate on RECENT attempts only, so a long benign session doesn't
+            # accumulate hours-apart flags into a false lockout
+            self._recent = [t for t in self._recent if now - t <= ATTEMPT_WINDOW]
+            self._recent.append(now)
+            recent = len(self._recent)
             self.log.append({"source": source, "score": score,
                              "labels": result["labels"]})
             result["attempt"] = True
-            if self.attempts >= LOWPOWER_ATTEMPTS:
+            if recent >= LOWPOWER_ATTEMPTS:
                 self.low_power = True
                 result["low_power"] = True
-            if score >= LOCK_SCORE or self.attempts >= LOCK_ATTEMPTS:
+            if score >= LOCK_SCORE or recent >= LOCK_ATTEMPTS:
                 self.locked, self.level = True, 2
                 result["locked"] = True
             elif self.level < 1:

@@ -1,0 +1,233 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+  background: #000;
+  user-select: none;
+}
+
+#game-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Crosshair */
+#crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Hotbar */
+#hotbar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  z-index: 10;
+}
+
+.slot {
+  width: 50px;
+  height: 50px;
+  border: 2px solid rgba(255,255,255,0.2);
+  background: rgba(0,0,0,0.3);
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.1s;
+}
+
+.slot:hover {
+  border-color: rgba(255,255,255,0.5);
+}
+
+.slot.active {
+  border-color: white;
+  box-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+
+.slot-number {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+}
+
+.slot-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot-icon canvas {
+  width: 36px;
+  height: 36px;
+}
+
+/* Debug info */
+#debug-info {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-size: 12px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  z-index: 10;
+  line-height: 1.6;
+}
+
+/* Loading screen */
+#loading-screen {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-content h1 {
+  color: #4a9;
+  font-size: 36px;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.loading-content p {
+  color: #aaa;
+  margin-bottom: 20px;
+}
+
+.loading-bar {
+  width: 300px;
+  height: 20px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid #333;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.loading-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4a9, #6c5);
+  transition: width 0.3s;
+}
+
+/* Start screen */
+#start-screen {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+#start-screen.hidden {
+  display: none;
+}
+
+.start-content {
+  text-align: center;
+  padding: 40px;
+}
+
+.start-content h1 {
+  color: #4a9;
+  font-size: 48px;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.controls-list {
+  background: rgba(0,0,0,0.3);
+  padding: 20px 30px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.controls-list h2 {
+  color: #4a9;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 8px;
+  color: #ccc;
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 10px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: white;
+  min-width: 80px;
+  text-align: center;
+}
+
+#play-button {
+  padding: 15px 50px;
+  font-size: 20px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(135deg, #4a9, #6c5);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+  text-transform: uppercase;
+}
+
+#play-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(74,153,153,0.5);
+}
+
+#play-button:active {
+  transform: scale(0.98);
+}
