@@ -251,8 +251,8 @@ def build_parser() -> argparse.ArgumentParser:
     # --- context compaction ---
     p.add_argument("--no-auto-compact", dest="auto_compact", action="store_false",
                    help="don't auto-summarize old turns when context grows")
-    p.add_argument("--compact-at", type=int, default=12000,
-                   help="auto-compact once estimated context exceeds N tokens")
+    p.add_argument("--compact-at", type=int, default=None,
+                   help="auto-compact past N tokens (default: ~70%% of the model's context window)")
     return p
 
 
@@ -296,6 +296,13 @@ def main(argv: list[str] | None = None) -> int:
         from .models import resolve_max_output
         args.max_tokens = cfg.get("default_max_tokens") or \
             resolve_max_output(args.model or "")
+    # auto-compact threshold scales with the model's context window
+    if args.compact_at is None:
+        from .models import compact_threshold
+        args.compact_at = cfg.get("compact_at") or compact_threshold(args.model or "")
+    # step cap: config override; 0/None -> effectively unlimited
+    if cfg.get("max_steps"):
+        args.max_steps = int(cfg["max_steps"])
 
     store = None if args.no_save else Store()
 
@@ -417,8 +424,8 @@ def main(argv: list[str] | None = None) -> int:
 # slash commands, for tab-completion + dispatch
 _COMMANDS = ["/help", "/status", "/model", "/provider", "/mode", "/plan",
              "/approve", "/learn", "/render", "/stream", "/tools", "/agents",
-             "/policy", "/integrity", "/sandbox", "/audit", "/monitor", "/lock",
-             "/history",
+             "/policy", "/integrity", "/sandbox", "/audit", "/monitor", "/steps",
+             "/reasoning", "/lock", "/history",
              "/clear", "/persona", "/thread", "/set", "/settings", "/jobs",
              "/securekeys", "/compact", "/conversations", "/resume", "/menu",
              "/quit"]
@@ -873,8 +880,10 @@ _SETTINGS = [
     ("default_model", "startup model", "text"),
     ("default_mode", "permission mode", "mode"),
     ("default_max_tokens", "default token budget", "int"),
-    ("compact_at", "auto-compact threshold", "int"),
+    ("compact_at", "auto-compact threshold (auto-scales to model)", "int"),
     ("auto_compact", "auto-compact on/off", "bool"),
+    ("max_steps", "tool-call rounds per turn (0 = unlimited)", "int"),
+    ("reasoning", "reasoning depth: brief/balanced/thorough", "text"),
     ("redact_secrets", "auto-hide pasted API keys", "bool"),
     ("sandbox_mode", "kernel sandbox: off/workspace/strict", "text"),
     ("monitor", "hidden judge-LLM on tool output", "bool"),
@@ -1101,6 +1110,8 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
             ("/model X", "switch model (keeps history)"),
             ("/provider X [M]", "switch provider (+ optional model)"),
             ("/mode M", "read-only · approve · auto"),
+            ("/steps [n|off]", "tool-call rounds per turn (off = unlimited)"),
+            ("/reasoning M", "brief · balanced · thorough"),
             ("/plan [on|off]", "plan mode — draft steps, then /approve to run"),
             ("/learn <subject>", "education mode — it tutors + quizzes you"),
             ("/persona ...", "set persona · /persona save NAME · load NAME · list"),
@@ -1132,7 +1143,11 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
         if not arg:
             note(f"model = {agent.provider.model}")
         else:
-            agent.provider.model = arg; note(f"model = {arg}")
+            agent.provider.model = arg
+            if not args.compact_at or True:      # rescale compaction to new model
+                from .models import compact_threshold
+                agent.compact_at = compact_threshold(arg)
+            note(f"model = {arg}  (compact at ~{agent.compact_at//1000}k tokens)")
     elif name == "provider":
         pp = arg.split()
         if not pp:
@@ -1261,6 +1276,27 @@ def _slash(cmd: str, ctx: "_Repl") -> bool:
         for t in T.specs():
             print("  " + ui.style(ui.G_TOOL + " " + f"{t.name:14}", ui.TOOL)
                   + ui.style(t.description, ui.MUTE), file=sys.stderr)
+    elif name == "steps":
+        a = arg.strip().lower()
+        if a in ("off", "0", "unlimited", "none"):
+            agent.max_steps = 0; config.set_value("max_steps", "0")
+            note("tool-step cap DISABLED — unlimited rounds (loop guard + ^C "
+                 "still protect you)")
+        elif a.isdigit():
+            agent.max_steps = int(a); config.set_value("max_steps", a)
+            note(f"tool-step cap → {a} rounds per turn")
+        else:
+            cur = agent.max_steps or "unlimited"
+            note(f"step cap: {cur} · /steps <n> or /steps off")
+    elif name == "reasoning":
+        a = arg.strip().lower()
+        if a in ("brief", "balanced", "thorough", "off"):
+            config.set_value("reasoning", a)
+            note(f"reasoning depth → {a}"
+                 + (" (restart or new thread to apply)" if False else ""))
+        else:
+            note(f"reasoning: {config.load().get('reasoning', 'balanced')} · "
+                 "brief · balanced · thorough")
     elif name == "render":
         args.render = not args.render
         note(f"markdown rendering {'on' if args.render else 'off'}")
@@ -1354,6 +1390,16 @@ def _compose_system(persona: str) -> tuple[str | None, str]:
         clean, _ = _sanitize_persona(style)      # vet it — config is writable
         if clean:
             parts.append("## When you must refuse\nDecline in this manner: " + clean)
+    reasoning = config.load().get("reasoning", "balanced")
+    _RDIR = {
+        "brief": "## Reasoning\nBe decisive and direct. Minimize deliberation; "
+                 "act quickly and keep explanations short.",
+        "thorough": "## Reasoning\nThink carefully and step by step before acting. "
+                    "Consider edge cases, verify assumptions with tools, and "
+                    "double-check your work before concluding.",
+    }
+    if reasoning in _RDIR:
+        parts.append(_RDIR[reasoning])
     return "\n\n".join(parts), ""
 
 

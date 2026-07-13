@@ -39,6 +39,38 @@ DEFAULT_MAX_OUTPUT = 8192
 HARD_CEILING = 32768   # never request more than this even if a model claims more
 
 
+# substring -> known CONTEXT-window size (input tokens). Longest/specific first.
+CONTEXT: list[tuple[str, int]] = [
+    ("gemini-2", 1_000_000), ("gemini-1.5", 1_000_000), ("gemini", 1_000_000),
+    ("gpt-4.1", 1_000_000),
+    ("claude-sonnet-4", 1_000_000), ("claude", 200_000),
+    ("o1", 200_000), ("o3", 200_000),
+    ("gpt-4o", 128_000), ("gpt-4-turbo", 128_000),
+    ("gpt-4", 8_192), ("gpt-3.5", 16_385),
+    ("llama-3", 128_000), ("llama", 8_192),
+    ("deepseek", 64_000), ("grok", 131_072),
+    ("mixtral", 32_000), ("mistral", 32_000), ("qwen", 32_000),
+]
+DEFAULT_CONTEXT = 32_000
+
+
+def resolve_context(model: str, discovered: dict | None = None) -> int:
+    """Best-known context-window size (input tokens) for `model`."""
+    if discovered and discovered.get("context"):
+        return int(discovered["context"])
+    m = (model or "").lower()
+    for pat, val in CONTEXT:
+        if pat in m:
+            return val
+    return DEFAULT_CONTEXT
+
+
+def compact_threshold(model: str, discovered: dict | None = None) -> int:
+    """When to auto-compact: ~70% of the context window, so a 1M-token model
+    keeps almost all its history and an 8k model compacts early."""
+    return int(resolve_context(model, discovered) * 0.70)
+
+
 def resolve_max_output(model: str, discovered: dict | None = None) -> int:
     """Best-known max output-token budget for `model`."""
     if discovered and discovered.get("max_output"):

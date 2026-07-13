@@ -239,7 +239,8 @@ class Agent:
         stopped_reason = "hit the tool-step limit"
 
         try:
-            for _ in range(self.max_steps):
+            # max_steps 0 = unlimited (loop-detection + Ctrl-C are the safety net)
+            for _ in range(self.max_steps if self.max_steps > 0 else 100_000):
                 completion = self._call(specs)
 
                 self._add(Message(role="assistant", content=completion.text,
