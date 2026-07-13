@@ -52,6 +52,11 @@ def short_error(status: int, body: str) -> str:
     if status == 400 and ("failed to call a function" in (detail or "").lower()
                           or "failed_generation" in (detail or "").lower()):
         hint = "model botched a tool call — try a stronger model"
+    _d = (detail or "").lower()
+    if ("image" in _d or "vision" in _d or "multimodal" in _d) and \
+            ("support" in _d or "invalid" in _d or "not " in _d):
+        hint = ("this model can't see images — switch to a vision model "
+                "(gpt-4o, claude-3.5+, gemini)")
     parts = [f"HTTP {status}"]
     if hint:
         parts.append(hint)

@@ -29,8 +29,18 @@ def mime_for(path: str) -> str | None:
     return _EXTS.get(os.path.splitext(path)[1].lower())
 
 
+def _normalize_path(path: str) -> str:
+    """Handle the ways terminals hand over a dragged file: file:// URLs and
+    %-encoding, plus ~ expansion and stray whitespace."""
+    path = path.strip().strip("'\"")
+    if path.startswith("file://"):
+        from urllib.parse import unquote, urlparse
+        path = unquote(urlparse(path).path)
+    return os.path.expanduser(path)
+
+
 def load(path: str) -> Image | None:
-    path = os.path.expanduser(path)
+    path = _normalize_path(path)
     mime = mime_for(path)
     if not mime or not os.path.isfile(path):
         return None
