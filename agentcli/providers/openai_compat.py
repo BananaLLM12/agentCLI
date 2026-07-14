@@ -41,7 +41,17 @@ class OpenAICompatProvider(Provider):
         return [m for m in out if m["id"]]
 
     # --- internal model -> OpenAI wire format ---------------------------
+    def _img_detail(self) -> str:
+        # "low" caps an image at ~85 tokens (vs thousands for "high") — huge
+        # savings on trial tiers. Default low; override via image_detail setting.
+        try:
+            from .. import config
+            return config.load().get("image_detail", "low")
+        except Exception:
+            return "low"
+
     def _encode_messages(self, messages: list[Message]) -> list[dict[str, Any]]:
+        detail = self._img_detail()
         out: list[dict[str, Any]] = []
         for m in messages:
             if m.role == "assistant" and m.tool_calls:
@@ -67,14 +77,14 @@ class OpenAICompatProvider(Provider):
                     for img in m.images:
                         b64 = base64.b64encode(img.data).decode()
                         parts.append({"type": "image_url", "image_url": {
-                            "url": f"data:{img.mime};base64,{b64}"}})
+                            "url": f"data:{img.mime};base64,{b64}", "detail": detail}})
                     out.append({"role": "user", "content": parts})
             elif m.role == "user" and m.images:
                 parts: list[dict[str, Any]] = [{"type": "text", "text": m.content}]
                 for img in m.images:
                     b64 = base64.b64encode(img.data).decode()
-                    parts.append({"type": "image_url",
-                                  "image_url": {"url": f"data:{img.mime};base64,{b64}"}})
+                    parts.append({"type": "image_url", "image_url": {
+                        "url": f"data:{img.mime};base64,{b64}", "detail": detail}})
                 out.append({"role": "user", "content": parts})
             else:
                 out.append({"role": m.role, "content": m.content})

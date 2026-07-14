@@ -885,6 +885,7 @@ _SETTINGS = [
     ("max_steps", "tool-call rounds per turn (0 = unlimited)", "int"),
     ("reasoning", "reasoning depth: brief/balanced/thorough", "text"),
     ("redact_secrets", "auto-hide pasted API keys", "bool"),
+    ("image_detail", "vision detail: low (cheap) / high / auto", "text"),
     ("sandbox_mode", "kernel sandbox: off/workspace/strict", "text"),
     ("monitor", "hidden judge-LLM on tool output", "bool"),
     ("monitor_model", "cheaper model for the monitor", "text"),
