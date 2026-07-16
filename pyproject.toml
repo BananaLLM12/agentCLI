@@ -31,4 +31,4 @@ agentcli = "agentcli.cli:main"
 packages = ["agentcli", "agentcli.providers"]
 
 [tool.setuptools.package-data]
-agentcli = ["MANIFEST.sha256"]
+agentcli = ["MANIFEST.sha256", "web/*.html", "web/*.css", "web/*.js"]

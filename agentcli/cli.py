@@ -248,6 +248,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--render", dest="render", action="store_true", default=None,
                    help="render markdown in replies (default: on when not streaming)")
     p.add_argument("--no-render", dest="render", action="store_false")
+    # --- desktop GUI ---
+    p.add_argument("--gui", action="store_true",
+                   help="launch the native desktop app instead of the terminal REPL")
     # --- context compaction ---
     p.add_argument("--no-auto-compact", dest="auto_compact", action="store_false",
                    help="don't auto-summarize old turns when context grows")
@@ -416,6 +419,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     ctx = _Repl(agent, args, make_agent)
+    if getattr(args, "gui", False):
+        from . import gui
+        return gui.launch(ctx, _state, _slash)
     _repl(ctx)
     return 0
 
