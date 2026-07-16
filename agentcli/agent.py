@@ -116,6 +116,7 @@ class Agent:
 
         base_history = build_base()
         ctx_compactions = 0
+        self._dropped_images = False
         while True:
             # spinner only wraps the model round-trip (not tool runs / prompts)
             spin = not self.stream
@@ -152,8 +153,30 @@ class Agent:
                     budget = max(self._MIN_BUDGET, budget // 2)
                     self.on_event("retry", "context tight — shrinking output budget")
                     continue
-                # -- too large for the tier: shrink and retry --
-                too_big = e.status == 413 or "too large" in msg or "tokens per minute" in msg
+                # -- request BODY too large (nginx/gateway, not a token tier):
+                #    shrinking max_tokens can't help — the upload itself is too
+                #    big, usually an image. Drop attached images and retry once. --
+                body_too_big = e.status == 413 and any(s in msg for s in (
+                    "nginx", "request entity", "entity too large", "content length",
+                    "body", "413 ")) and "tokens per minute" not in msg
+                if body_too_big and not getattr(self, "_dropped_images", False):
+                    self._dropped_images = True
+                    dropped = 0
+                    for _m in self.history:
+                        if _m.images:
+                            dropped += len(_m.images); _m.images = []
+                    if dropped:
+                        base_history = build_base()
+                        self.on_event("retry", f"request body too large — dropped "
+                                      f"{dropped} image(s) and retrying "
+                                      f"(try a smaller image / detail=low)")
+                        continue
+                    return ("⚠ The request is too large for the provider's upload "
+                            "limit (not a token issue). Try a smaller image.")
+                # -- too large for the TIER (TPM/token budget): shrink + retry --
+                too_big = ("tokens per minute" in msg or "tpm" in msg
+                           or ("too large" in msg and "token" in msg)
+                           or (e.status == 413 and "token" in msg))
                 if too_big and budget > self._MIN_BUDGET:
                     limit = _extract_limit(str(e))
                     if limit:
